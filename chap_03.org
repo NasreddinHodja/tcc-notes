@@ -1,0 +1,21 @@
+#+title: Chap 3
+
+* Basic Window Program [3]
+Every Xlib program has a similar structure. This chap shows a simple program that puts up windows and handles events in that window.
+
+The program will perform these operations:
++ Connect the client to an X server with =XOpenDisplay()=, and exit gracefully if the connection could not be made.
++ Get information about the physical screen, and use it to calculate the desired size of the window.
++ Create a window with =XCreateSimpleWindow()=.
++ Set standard properties for the window manager.
++ Select the types of events it needs to receive.
++ Load the font to be used for printing text.
++ Create a graphics context to control the action of drawing requests.
++ Display the window with =XMapWindow()=.
++ Loop for events.
++ Respond to the =Expose= event resulting from mapping the window (and any other =Expose= event that might come along later) by calling routines to draw text and graphics. It the window is too small to perform its intended function, it will display an appropiate message.
++ Receive =ConfigureNotify= evetns, indicating that the window has been resized by the window manager. The new window size if provided in the event structure.
++ Keep handling events untill a =KeyPress= or =ButtonPress= event arrives, then close the display connection e exits.
+
+The program does not perform the following operatins, which are required of a robust X client:
++

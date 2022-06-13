@@ -1,0 +1,6 @@
+#+title: Xlibmanual Notes
+#+options: toc:nil
+
+* [[./chap_01.org][1. Intro]]
+* [[./chap_02.org][2. How Xlib Works]]
+* [[./chap_03.org][3. Basic Window Program]]

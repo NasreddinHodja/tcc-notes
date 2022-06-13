@@ -1,0 +1,6 @@
+#+title: Scratch
+
+* history
++ customization is a the core of the unix filosophy
+  - [[https://en.wikipedia.org/wiki/Unix_philosophy][unix philosophy]]
+  - [[https://medium.com/blacktech/introdu%C3%A7%C3%A3o-ao-ricing-60243fab4275][breve historico windows & unix]]
