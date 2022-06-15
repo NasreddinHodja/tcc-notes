@@ -18,4 +18,105 @@ The program will perform these operations:
 + Keep handling events untill a =KeyPress= or =ButtonPress= event arrives, then close the display connection e exits.
 
 The program does not perform the following operatins, which are required of a robust X client:
-+
++ Allow the user to specify command line options and read the resource database.
++ Handle colors.
+
+** Running the Program [3.1]
++ The program just displays a window with some text and graphics drawn into it.
+
+** The Main of basicwin [3.2]
++ The main does everything described at the start of this chapter except create the GC, load the font, and draw the text and graphics.
+  - These are done in the =draw_graphics=, =draw_text=, =get_GC= and =load_font= routines.
+
+*** Include Files and Declarations [3.2.1]
+#+begin_src c
+/* Xlib include files */
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xos.h>
+#include <X11/Xatom.h>
+/* Standard C include file */
+#include <stdio.h>
+/* Bitmap data for icon */
+#include "bitmaps/icon_bitmap"
+#define BITMAPDEPTH 1
+/* Values for window_size in main −− is window big enough to be
+ ,* useful? */
+#define TOO_SMALL 0
+#define BIG_ENOUGH 1
+/* Display and screen_num are used as arguments to nearly every
+ * Xlib routine, so it simplifies routine calls to declare them
+ * global; if there were additional source files, these variables
+ * would be declared "extern" in them */
+Display *display;
+int screen_num;
+/* Name this program was invoked by; this is global because
+ * it is used in several places in application routines, not
+ * just in main */
+static char *progname;
+void main(argc, argv)
+int argc;
+char **argv;
+{
+   Window win;
+   unsigned int width, height;      /* Window size */
+   int x = 0, y = 0;                /* Window position */
+   unsigned int border_width = 4;   /* Border four pixels wide */
+   unsigned int display_width, display_height;
+   char *window_name = "Basic Window Program";
+   char *icon_name = "basicwin";
+   Pixmap icon_pixmap;
+   XSizeHints *size_hints;          /* Preferred sizes for window man */
+   XEvent report;                   /* Structure for event information */
+   GC gc;                           /* ID of graphics context */
+   XFontStruct *font_info;          /* Structure containing
+                                     * font information */
+   char *display_name = NULL;       /* Server to connect to */
+#+end_src
+
++ =<X11/Xlib.h>=, =<X11/Xutil.h>= and =<X11/Xos.h>= are needed in virtually all Xlib programs.
+  - =<X11/Xlib.h>= contains structure types used in Xlib functions.
+    - Includes =<X11/X.h>= which sets up many defined constants.
+  - =<X11/Xutil.h>= contains more structures and defined constants for certain groups of Xlib funcs.
+  - =<X11/Xos.h>= attempts to make programs as portable as possible by including files depending on the OS for which the program is being compiled.
+    - Not absolutely necessary, but useful.
+
+These are the types that appear: =Window=, =Display=, =Pixmap=, =XSizeHints=, =XEvent= are all defined in =<X11/Xlib.h>=.
++ =Window=: Unique ID that is returned by =XCreateWindow()= or =XCreateSimpleWindow()= and is thereafter used by the program to refer to the created resource.
++ =Display=: Large structure that contains info about the server and its screens. It is filled only after this program connects to a server by calling =XOpenDisplay()=.
++ =Pixmap=: ID but for pixmap resource. In this case, it's a picture to display in the icon for the window.
++ =XSizeHints=: Structure that is used to provide the window manager with information about the preferred sizes and size increments for the top-level window of the application.
++ =XEvent=: Union that stores information about an event. It can be interpreted as one of many individual structure types depending on the type of event.
+
+*** Connection to a Server [3.2.2]
+#+begin_src c
+char *display_name = NULL;
+Display *display;
+int screen_num;
+Screen *screen_ptr;
+   .
+   .
+   .
+progname = argv[0];
+/* Connect to X server */
+if ( (display=XOpenDisplay(display_name)) == NULL )
+{
+   (void) fprintf( stderr, "%s: cannot connect to X server %s\n",
+               progname, XDisplayName(display_name));
+   exit( −1 );
+}
+screen_num = DefaultScreen(display);
+screen_ptr = DefaultScreenOfDisplay(display);
+#+end_src
+
++ =display_name= arg specifies which server to connect to.
+  - When =NULL=, =XOpenDisplay()= will connect to the server specified in the UNIX env var =DISPLAY=.
+  - The format is =host:server.screen=, host is name of machine running the server, server is the server number on that machine, and screen is the screen number on that server.
+  - server number is ALWAYS 0 on a single-user workstation and may be nonzero only if a single host has a separate keyboard, printer, and display for more than one user, all connected by wires to the central host.
+
++ =XOpenDisplay()= returns a pointer to a structure of type =Display=.
+  - If the connection is successfull, the structure will be filled with information about the server and each of its screens.
+  - If the connection fails, it returns =NULL=.
+
++ Why fail to connec to a server?
+  - =display_name= var or =DISPLAY= env var does not specify a valid server.
