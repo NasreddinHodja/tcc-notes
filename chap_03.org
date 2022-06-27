@@ -13,11 +13,11 @@ The program will perform these operations:
 + Create a graphics context to control the action of drawing requests.
 + Display the window with =XMapWindow()=.
 + Loop for events.
-+ Respond to the =Expose= event resulting from mapping the window (and any other =Expose= event that might come along later) by calling routines to draw text and graphics. It the window is too small to perform its intended function, it will display an appropiate message.
++ Respond to the =Expose= event resulting from mapping the window (and any other =Expose= event that might come along later) by calling routines to draw text and graphics. It the window is too small to perform its intended function, it will display an appropriate message.
 + Receive =ConfigureNotify= evetns, indicating that the window has been resized by the window manager. The new window size if provided in the event structure.
 + Keep handling events untill a =KeyPress= or =ButtonPress= event arrives, then close the display connection e exits.
 
-The program does not perform the following operatins, which are required of a robust X client:
+The program does not perform the following operations, which are required of a robust X client:
 + Allow the user to specify command line options and read the resource database.
 + Handle colors.
 
@@ -263,3 +263,354 @@ win = XCreateSimpleWindow(
 + =XCreateWindow()= is used when we want to specify any or all attributes instead of inheriting them from parent.
 
 *** Color Strategy [3.2.6]
++ Applications do not choose pixel colors, they choose colors and are returned pixel values by a routine they call that allocates colors or they get pixel values from display macros =BackPixel()= and =WhitePixel()=.
+
++ We use the the =WhitePixel()= macro to specify the background pixel value and set the foreground in the GC to be the contrasting value returned by =BackPixel()=.
+  - The border pixel value is also set to =BlackPixel()=.
+  - Background and border pixel values are set with the last two arguments of =XCreateSimpleWindow()=.
+  - Foreground pixel value is set in the =get_GC= routine in the manner described in Section 5.1.
+
++ Adding color is described in Chap 7.
+
+*** Preparing an Icon Pixmap [3.2.7]
++ An app should create an icon design for itself, so that if a window manager is running and the user iconifies the application, the icon will be recognizable as belonging to the particular application.
+
+The program should take 2 steps in creating the pixmap:
+1. it should find out what sizes of icons are acceptable;
+2. create a pixmap of appropriate size.
+*This step can be ignored because currently WMs don't usually specify icon sizes. When they do, applications should use =XGetIconSizes()= to determine which WM was in operation and have a icon bitmat for each one.*
+
+#+name: Example 3-7. basicwin -- creating an icon pixmap
+#+begin_src c
+#include "bitmaps/icon_bitmap"
+void main(argc, argv)
+int argc;
+char **argv;
+{
+   /* Other declarations */
+     .
+     .
+     .
+   Pixmap icon_pixmap;
+   /* Open display, create window, etc. */
+   /* Might someday want to use XGetIconSizes to get the icon
+    * sizes specified by the window manager in order to determine
+    * which of several icon bitmap files to use, but only when
+    * some standard window managers set these */
+   /* Create pixmap of depth 1 (bitmap) for icon */
+   icon_pixmap = XCreateBitmapFromData(display, win,
+         icon_bitmap_bits, icon_bitmap_width,
+         icon_bitmap_height);
+     .
+     .
+     .
+#+end_src
+
++ Icon design can be created using X app =bitmap=.
+  - =$ bitmap icon_bitmap 40x40=
+
+#+name: Example 3-8. Format of bitmap files
+#+begin_src c
+#define icon_bitmap_width 20
+#define icon_bitmap_height 20
+static char icon_bitmap_bits[] = {
+   0x60, 0x00, 0x01, 0xb0, 0x00, 0x07, 0x0c, 0x03, 0x00, 0x04, 0x04, 0x00,
+   0xc2, 0x18, 0x00, 0x03, 0x30, 0x00, 0x01, 0x60, 0x00, 0xf1, 0xdf, 0x00,
+   0xc1, 0xf0, 0x01, 0x82, 0x01, 0x00, 0x02, 0x03, 0x00, 0x02, 0x0c, 0x00,
+   0x02, 0x38, 0x00, 0x04, 0x60, 0x00, 0x04, 0xe0, 0x00, 0x04, 0x38, 0x00,
+   0x84, 0x06, 0x00, 0x14, 0x14, 0x00, 0x0c, 0x34, 0x00, 0x00, 0x00, 0x00};
+#+end_src
+
++ This format is used in =XCreateBitmapFromData()=, =XWriteBitmapFile()=, =XReadBitmapFile()=
+  - An app can also read from a file instead of =#define=.
+
+*** Communicating with the Window Manager [3.2.8]
++ Before mapping the window, an app must set the standard properties to tell the WM at least a few essential things about the app.
++ The standard properties are part of the convention for communication between each app and the WM.
+  - Associated with the top level window of an app.
+
++ The routine designed to set all the most important properties for a normal app is =XSetWMProperties()=.
+
++ The doc describing the standard for communication between the app and the WM is called the /Inter-Client Communication Conventions Manual/; (reprinted in Appendix L)
+
++ The minimum set of properties that an app must set are:
+  - Window name
+  - Icon name
+  - Icon pixmap
+  - Command name and arguments (the command line)
+  - Number of arguments
+  - Preferred window sizes
+  - Keyboard focus model
+
+#+name: Example 3-9. basicwin -- setting standard properties
+#+begin_src c
+void main(argc, argv)
+int argc;
+char **argv;
+{
+   XWMHints *wm_hints;
+   XClassHint *class_hints;
+   XTextProperty windowName, iconName;
+      .
+      .
+      .
+   /* To be displayed in window manager’s titlebar of window */
+   char *window_name = "Basic Window Program";
+   /* To be displayed in icon */
+   char *icon_name = "basicwin";
+   Pixmap icon_pixmap;
+   XSizeHints *size_hints; /* Structure containing preferred sizes */
+   if (!(size_hints = XAllocSizeHints())) {
+      fprintf(stderr, "%s: failure allocating memory, progname);
+      exit(0);
+   }
+   if (!(wm_hints = XAllocWMHints())) {
+      fprintf(stderr, "%s: failure allocating memory, progname);
+      exit(0);
+   }
+   if (!(class_hints = XAllocClassHint())) {
+      fprintf(stderr, "%s: failure allocating memory, progname);
+      exit(0);
+   }
+   /* Open display, create window, create icon pixmap */
+      .
+      .
+      .
+   /* Before mapping, set size hints for window manager */
+   /* Note that in a real application, if size or position were
+    ,* set by the user, the flags would be USPosition and USSize,
+    ,* and these would override the window
+    ,* manager’s preferences for this window.  */
+   /* x, y, width, and height hints are taken from the
+    ,* actual settings of the window when mapped; note that
+    ,* PPosition and PSize must be specified anyway */
+   size_hints−>flags = PPosition | PSize | PMinSize;
+   size_hints−>min_width = 300;
+   size_hints−>min_height = 200;
+   /* These calls store window_name and icon_name into
+    ,* XTextProperty structures and set their other fields
+    ,* properly */
+   if (XStringListToTextProperty(&window_name, 1, &windowName) == 0) {
+       (void) fprintf( stderr, "%s: structure allocation for \
+            windowName failed.\n", progname);
+      exit(−1);
+   }
+   if (XStringListToTextProperty(&icon_name, 1, &iconName) == 0) {
+      (void) fprintf( stderr, "%s: structure allocation for \
+            iconName failed.\n", progname);
+      exit(−1);
+   }
+   /* Whether application should be  normal or iconified
+    * when first mapped */
+   wm_hints−>initial_state = NormalState;
+   /* Does application need keyboard input? */
+   wm_hints−>input = True;
+   wm_hints−>icon_pixmap = icon_pixmap;
+   wm_hints−>flags = StateHint | IconPixmapHint | InputHint;
+   /* These are used by the window manager to get information
+    * about this application from the resource database */
+   class_hints−>res_name = progname;
+   class_hints−>res_class = "Basicwin";
+   XSetWMProperties(display, win, &windowName, &iconName,
+         argv, argc, size_hints, wm_hints,
+         class_hints);
+#+end_src
+
++ Remember that these properties are only *hints*.
+  - Therefore an application should not depend on anything having been done with the info provided in the standard properties.
+
++ The convention within WMs is to use the window name as the icon name; if the window name is not specified either, then they will use the first element of the command line.
+
++ The UNIX shell command name and args are passed into /main/ in the standard fashion from the command line. These can be used directly as arguments in the call to set the standard properties.
+
++ The window size hits property is a structure that specifies the sizes, positions, and aspec ratis preferred by the user or the program for this app.
+
+#+name: Example 3-10. The XSizeHints structure
+#+begin_src c
+typedef struct {
+        long flags;                    /* Marks defined fields
+                                        * in this structure */
+        int x, y;                      /* Obsolete as of R4 */
+        int width, height;             /* Obsolete as of R4 */
+        int min_width, min_height;
+        int max_width, max_height;
+        int width_inc, height_inc;
+        struct {
+                int x;                 /* Numerator */
+                int y;                 /* Denominator */
+        } min_aspect, max_aspect;
+        int base_width, base_height;   /* New in R4 */
+        int win_gravity;                /* New in R4 */
+} XSizeHints;
+#+end_src
+
++ Applications can be written to let the user specify the position and size fo the top-level window through command line arguments or the resource database.
+  - To tell the window manager that the user, not the app, supplied these values, the app would set the =flags= field to =USSize | USPosition= instead of =PSize | PPosition=.
+
++ In Example 3-9, the symbols used to set =flags= are =PSize= and =PMinSize=.
+  - These indicate that the program is specifying its desired size and its minimum useful size.
+
++ =x, y, width, height= are simply the desired position and size for the window.
+
++ The rest of the size hints tells the WM information about how to resize windows.
+  - =min_height= and =min_width= should be set to minimum dimensions (in pixels) required so that the app can still function normally.
+  - Many WMs will not allow the user to resize windows beyond these limits.
+
+*** Selecting Desired Event Types [3.2.9]
++ Next step is to select the event types that the app will require.
++ Our app must receive events for 3 reasons:
+  - redraw itself in case of exposure;
+  - recalculate its contents when it is resized;
+  - and to receive a button or key press indicating that the used is finished with the app.
+#+name: Example 3-11. basicwin -- selecting desired event types
+#+begin_src c
+/* Select event types wanted */
+XSelectInput(display, win, ExposureMask | KeyPressMask |
+   ButtonPressMask | StructureNotifyMask);
+#+end_src
+
++ =StructureNofityMask= selects a number of event types, specifically =CirculateNotify=, =ConfigureNotify=, =DestroyNotify=, =GravityNotify=, =MapNotify=, =ReparentNotify=, =UnmapNotify=.
+  - =ConfigureNotify= informs the app of its window's new size when it has been resized.
+
++ =XSelectInput()= sets the =event_mask= attr of the window.
+
++ =XCreateWindow()= allows you to select events at the same time by specifying the =event_mask= attribute.
+  - More efficient than calling =XSelectInput()= separately.
+
+*** Creating Server Resources [3.2.10]
++ Next step is to create any other server resources that are needed.
+  - They should be created only once and the ID kept rather than creating and deleting them in frequently called subroutines.
+
++ In our app, we still need to load a font for the text and to create a GC to draw both text and graphics.
+  - These operations are done in the routines =load_font()= and =get_GC()=. (called just before mapping the window).(will be described in Chap 5)
+
+*** Window Mapping [3.2.11]
++ Next step is to display the window.
+#+name: Example 3-12. basicwin -- mapping the window
+#+begin_src c
+/* Display window */
+XMapWindow(display, win);
+#+end_src
+
++ (Remeber Chap 2, "X Concepts") In order for window to be visible, it must meet 5 conditions:
+  1. The window must be mapped with =XMapWindow()= or related routines.
+  2. All its ancestors must be mapped. Always satisfied for the children of the root window.
+  3. The window must not be obscured by visible sibling windows or their ancestors -- this depends on the stacking order.
+     - When first mapped, a window appears on top of its siblings.
+  4. The request buffer must be flushed.
+  5. The initial mapping of the top-level window is a special case, since the window's visibility may  be delayed by the WM.
+     - For complicated reasons, an app must wait for the first =Expose= event before assuming that its window is visible and drawing to it.
+
+*** Flushing the Output Buffer [3.2.12]
++ =XMapWindow()= causes an X protocol request that instructs the server to display the window on the screen.
+  - This request (like all) is queued until an event-reading routine such as =XNextEvent()=, a routine that queries the server (most routine names contain =Fetch=, =Get=, =Query=), or a routine such as =XFlush()= or =XSync= is called.
+  - *The server operates more efficiently over the network when X protocol requeests are sent in groups.*
+
++ *The =XNextEvent()= call performs the flushing frequently enough in apps that take user input.*
+  - The routines that query the server should be called as infrequently as possible because they reduce performance over the network.
+  - The =XFlush()= command instructs the server to process all queued output requests right away.
+  - =XFlush()= is generally necessary only when an app needs to draw periodically even without user input.
+
+*** Setting Up an Event-gathering Loop [3.2.13]
++ X programs are event-driven, which means that after stting up all the server resources and window manager hints, the program performs actions only in response to events.
++ The event-gathering loop is the standard way to respond to events, performing the appropriate action depending on the type of the event and the information contained in the event structure.
++ It is normally a closed loop, in which one of the event types with certain contents defined by the app indicates that the user wants to exit.
+  - The choice of which events are received by the app was made earlier when the app selected input or set the =event_mask= attribute.
+  - The event loop must make sure to properly handle every event type selected.
+  - *One of the most common debugging problems is for there to be a difference between the events handled and those selected.*
+
+#+name: Example 3-13. basicwin -- processing events
+#+begin_src c
+  .
+/* Get events, use first Expose to display text and graphics
+ ,* ConfigureNotify to indicate a resize (maybe even before
+ ,* first Expose); ButtonPress or KeyPress to exit */
+while (1)  {
+   XNextEvent(display, &report);
+   switch  (report.type) {
+   case Expose:
+      /* Unless this is the last contiguous expose,
+       ,* don’t draw the window */
+      if (report.xexpose.count != 0)
+         break;
+      /* If window too small to use */
+      if (window_size == TOO_SMALL)
+         TooSmall(win, gc, font_info);
+      else {
+         /* Place text in window */
+         place_text(win, gc, font_info, width, height);
+         /* Place graphics in window */
+         place_graphics(win, gc, width, height);
+      }
+      break;
+   case ConfigureNotify:
+      /* Window has been resized; change width and height
+       ,* to send to place_text and place_graphics in
+       ,* next Expose */
+      width = report.xconfigure.width;
+      height = report.xconfigure.height;
+      if ((width < size_hints−>min_width) ||
+            (height < size_hints−>min_height))
+         window_size = TOO_SMALL;
+         else
+         window_size = BIG_ENOUGH;
+      break;
+   case ButtonPress:
+      /* Trickle down into KeyPress (no break) */
+   case KeyPress:
+      XUnloadFont(display, font_info−>fid);
+      XFreeGC(display, gc);
+      XCloseDisplay(display);
+      exit(1);
+   default:
+      /* All events selected by StructureNotifyMask
+       * except ConfigureNotify are thrown away here,
+       * since nothing is done with them */
+      break;
+   } /* End switch */
+} /* End while */
+#+end_src
++ A =ConfigureNotify= event is always followed by one or more =Expose= events.
+
+**** Repainting the Window [3.2.13.1]
++ =Expose= events occur when a window becomes visible on the screen, after being obscured or unmapped.
+  - They occur because the X Window System does not normally save the contents or regions of windows obscured by other windows or not mapped.
+  - The contents of windows need to be redrawn when they are exposed.
+
++ The code for =Expose= events draws or redraws the contents of the app's window.
+  - This code will be reached when the window is frist mapped, and whenever a portion of the window becomes visible.
+
++ An app can respond to =Expose= events by refreshing only the parts of the window exposed, or by refreshing the entire window.
+  - The former is possible because the event structure for each =Expose= event carries the position and dimensions of a single rectangular exposed area.
+
+#+name: Example 3-14. The XExposeEvent structure
+#+begin_src c
+typedef struct {
+   int type;
+   unsigned long serial;/* # of last request processed by server */
+   Bool send_event;     /* True if this came from SendEvent request */
+   Display *display;    /* Display the event was read from */
+   Window window;
+   int x, y;
+   int width, height;
+   int count;           /* If nonzero, at least this many more */
+} XExposeEvent;
+#+end_src
+
++ Several =Expose= expose events can occur because of a single WM operation, as shown in Figure 3-2.
+  - If window E were raised, 4 =Expose= events will be sent to it.
+  - The =height= and =width= members in each event structure would correspond to the dimensions of the areawhere each of the windows overlapped window E, and the =x= and =y= members would specify the upper-left corned of each area relative to the origin of window E.
+  - All the =Expose= events generated by a single action are guaranteed to be contiguous in the event queue.
+
+#+name: Figure 3-2. Multiple Expose events generated from a single user action
+#+attr_html: :width 500px
+[[./imgs/fig3_2.png]]
+
++ Whether an app should draw the whole window or just the exposed parts depends on the complexity of the drawing in the window.
+  - If all the window contents are simple for both the app and the server to draw, the entire window contents can be redrawn without a performance problem.
+  - This approach works well as long as the window is only redrawn once, event if multiple =Expose= events occur because of a single user action.
+  - One trick is to monitor the =count= member of the =Expose= events occur and ignore the =Expose= events (do not redraw the window) until this member is =0=.
+  - It might seem an even better method to search the entire event queue, removing all =Expose= events that occured on the window, before redrawind. But this isillegal because there may be intervening =ConfigureNotify= evetns in the queue, and responding to an =Expose= event that follows a =ConfigureNotify= evetn too early will result in redrawind the wrong area or not redrawing at the right time.
+    - Only /contiguous/ =Expose= events can be skipped.
+
++ On the other hand, if a window has any elements thatt can be time consuming for either the app or the serve to redraw, then the app should only redraw the time-consuming elements if they are actually within the exposed areas.
