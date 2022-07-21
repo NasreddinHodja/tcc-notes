@@ -613,4 +613,162 @@ typedef struct {
   - It might seem an even better method to search the entire event queue, removing all =Expose= events that occured on the window, before redrawind. But this isillegal because there may be intervening =ConfigureNotify= evetns in the queue, and responding to an =Expose= event that follows a =ConfigureNotify= evetn too early will result in redrawind the wrong area or not redrawing at the right time.
     - Only /contiguous/ =Expose= events can be skipped.
 
-+ On the other hand, if a window has any elements thatt can be time consuming for either the app or the serve to redraw, then the app should only redraw the time-consuming elements if they are actually within the exposed areas.
++ On the other hand, if a window has any elements that can be time consuming for either the app or the serve to redraw, then the app should only redraw the time-consuming elements if they are actually within the exposed areas.
+
+Redrawing time has 2 components uder the application's control:
++ the time the app takes to process the redrawing instructions,
++ the time it takes for the server to actually do the redrawing.
+  - Critical, translates directly into waiting by the user.
+
+These are the general rules for which redrawing approach you should choose:
+1. If the window is fast to draw, the whole window can be drawn in response to the last =Expose= event in a contiguous series; this means drawing only when the =count= is 0.
+   - Anythong that uses the more comples features of the GC, such as wide lines or join styles, or that may have lots of drawing requests should probably be considered slow.
+   - Example 3-14
+2. For windows that are slow to draw, the app should avoid drawing areas that were not exposed.
+   - If the app can figure out which slow drawing request would draw only into areas that were not exposed and these calculations are not time consuming in themselves, then it should *eliminate* these requests.
+3. For windows that are slow to draw, the second best approach is to set a clip mask to allow the server to eliminate unnecessary requests.
+   - The app can combine all the areas in a contiguous series of expose events into a single clip mask and set this clip mask into the GC.
+   - Code for this is slightly more complex than the approach for the window that is fast to draw.
+
+#+name: Example 3-15. Handling Expose events for complex window contents
+#+begin_src c
+int window_size = BIG_ENOUGH;  /* Or TOO_SMALL to display contents */
+Region region;                 /* Coalesce rectangles from all Expose
+                                ,* events */
+XRectangle rectangle;          /* Place Expose rectangles in here */
+     .
+     .
+/* Create region for exposure event processing */
+region = XCreateRegion();
+while (1)  {
+   XNextEvent(display, &report);
+   switch  (report.type) {
+   case Expose:
+      if (window_size == TOO_SMALL) {
+         TooSmall(win, gc, font_info);
+         break;
+      }
+      /* Set rectangle to be exposed area */
+      rectangle.x = (short) report.xexpose.x;
+      rectangle.y = (short) report.xexpose.y;
+      rectangle.width = (unsigned short) report.xexpose.width;
+      rectangle.height = (unsigned short) report.xexpose.height;
+      /* Union this rect into a region */
+      XUnionRectWithRegion(&rectangle, region, region);
+      /* If this is the last contiguous expose in a group,
+       ,* set the clip region, clear region for next time
+       ,* and draw */
+      if (report.xexpose.count == 0) {
+         /* Set clip region */
+         XSetRegion(display, gc, region);
+         /* Clear region for next time */
+         XDestroyRegion(region);
+         region = XCreateRegion();
+         /* Place text in window */
+         place_text(win, gc, font_info, width, height);
+         /* Place graphics in window */
+         place_graphics(win, gc, width, height);
+      }
+      break;
+#+end_src
+
++ For a few apps, being able to redraw the contents of its windows might be very difficult or impossible. there is another method that might be used in this situation.
+  - The app could draw into a pixmap and then copy the pixmap to the window each time the window needs redrawing.
+  - That way the complete window contents would always be available for redrawing the window on =Expose= events.
+  - The disadvantage of this approach is that the server might not have sufficient memory to store many pixmaps in memory (especially on color displays) or it might be slow about copying the pixmap to the window.
+  - But this would be a logical way to handle exposure in an app that performs double-buffering.
+    - double-buffering is an animation technique that hides the drawing process from the viewer.
+
++ On high performance graphics workstations, a feature known as *backing store* might also be available to assist in redrawing windows. When available, this feature can be turned on for any window that really requires it.
+  - With the backing store on, the server can maintain the contents of the window when it is obscured and even when it is unmapped and capture drawing to the window while it is in one of these states.
+  - Resizing the window is something that backing store can't fully take care of. Because it is assumed that most apps need to recalculate the dimensions of their contents to fit a new window size.
+    - The app can set an attribute called bit gravity to retain part of the window during a resize, but part of the window is still going to need redrawing if the window is resized larger.
+
+*** Where Can I Draw? [3.2.14]
++ Drawing is allowed until the first =Expose= event arrives.
++ The reason involves a feature of X called substructure redirection.
+
+*** When Will My Drawing Appear [3.2.15]
++ Graphics drawn may not appear on the screen immediately. This is because X is designed to buffer communications over a network.
++ The requests (to create windows, to map windows, or to draw into them) are queued up in Xlib, waiting for something to happen that requires an immediate communication with the server.
++ The queue of requests waiting to be sent to the server is called /request buffer/. The requests are accumulated in the request buffer until a call to:
+  1. Any routine which requests information from the X server
+  2. Certain requests for getting events (=XMaskEvent()=, =XNextEvent()=, =XPending()=, =XWindowEvent=)
+     - Triggers a communication with the server only if there is no event on Xlib's event queue that matches what the routine is looking for.
+     - This is said to /flush/ the request buffer. All requests up do this point will be acted on by the server.
+  3. =XFlush()=
+  4. =XSync()=
+
+Does it really take a lot of care to make sure that the request buffer gets flushed?
++ If an app handles event types that occur, such as pointer or keyboard events, there is nothing to worry about.
++ If an ap needs to get info from the server by making a call containing the word =Fetch=, =Get=, or =Query=, no problem is likely.
++ An output-only app that handles only =Expose= events would certainly need to call =XFlush()= once in a while.
+
+*** Handling REsizing of the Window [3.2.16]
++ The =ConfigureNotify= event tells the app that the window was resized.
+  - In this program, we pass this info to the routines that draw, so that they can position things properly.
+  - We also see if the new size if less than the minimum useful size that we set as a size hint for the window manager.
+    - If it is smaller in either dimension, then we set the flag =window_size= so that the next time and =Expose= event arrives, we display the message "Too Small" instead of the usual text
+
+#+name: Example 3-16. basicwin -- the ConfigureNotify event
+#+begin_src c
+  .
+  .
+  .
+case ConfigureNotify:
+   /* Window has been resized; change width and height to
+    * send to place_text and place_graphics in next Expose */
+   width = report.xconfigure.width;
+   height = report.xconfigure.height;
+   if ((width < size_hints−>min_width) ||
+         (height < size_hints−>min_height))
+      window_size = TOO_SMALL;
+   else
+      window_size = BIG_ENOUGH;
+   break;
+  .
+  .
+  .
+#+end_src
+
+*** Exiting the Program [3.2.17]
+This program uses a key or button press to exit.
++ To cleanly exit, a client should free all the memory it has allocated, particularly X resources, ant then close the display connection with =XCloseDisplay()=
+
+#+name: Example 3-17. Closing the display connection and freeing resources
+#+begin_src c
+case ButtonPress:
+        /* Trickle down into KeyPress (no break) */
+case KeyPress:
+        XUnloadFont(display, font_info−>fid);
+        XFreeGC(display, gc);
+        XCloseDisplay(display);
+        exit(1);
+#+end_src
+
++ It is good practice to use =XCloseDisplay()= event though the connection to the server is closed automatically and a process exits.
+
+*** Error Handling [3.2.18]
++ On the =XOpenDisplay()= call, we check for the error return, tell the user what server the attempt was made to connect, and exit gracefully.
++ For all other errors, we depend on the default error-handling mechanisms.
+
++ Not all protocol errors cause the error handler to be invoked.
+  - Some errors are indicated by returned values of type =Status= on the appropriate routine. Any routine that returns =Status= will have need its return value tested.
+
+*** Summary [3.2.19]
+The basic steps that we took are as follows:
+1. Open connection to server.
+2. Make sure connection succeeded, print error and exit if not.
+3. Get display dimensions.
+4. Calculate desired size of window and create window.
+5. Create pixmap for icon.
+6. Initialize XSizeHint structure.
+7. Set standard properties for window manager.
+8. Select desired event types.
+9. Map window.
+10. Set up event gathering loop.
+11. If event is of type Expose, draw contents of window.
+12. If event is of type ConfigureNotify, recalculate dimensions of window.
+13. If event is ButtonPress or KeyPress, close the display and exit.
+
++ The order of these steps is important only up to the point where the window is mapped.
