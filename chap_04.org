@@ -1,0 +1,279 @@
+#+title: Chap 4: Window Attributes
+
++ Control a window's:
+  - background
+  - border
+  - patter
+  - color
+  - events that should be queued for it
+  - etc.
+
++ Setting windows attributes is necessary when you use =XCreateWindow()= instead of =XCreateSimpleWindow()=.
+  - However, *it's not necessary that you set any window attributes other than the window background and border*. This chapter is mainly about optional features that you may find useful.
+
+* Setting Window Attributes [4.1]
++ Can be set while creating a window with =XCreateWindow()= or afterwerd witha  call to =XChangeWindowAttributes()=.
++ When creating a window with =XCreateSimpleWindow()=, most of the attributes are inherited from the parent.
++ There are also several routines for changin individual window attributes, including the =event_mask=, background and border.
+
++ To set with =XCreateWindow()= or =XChangeWindowAttributes()=, you set the members of an =XSetWindowAttributes= structure to the desired values, create a mask indicating which members you have set, and call the routine.
+
+* The Window Attribute Structure [4.2]
+There are 2 structures associated with window attributes.
++ =XWindowAttributes= is a read-only structure that contains all the attributes.
++ =XSetWindowAttributes= is a structure that contains only those attributes that a program is allowed to set.
+
+#+name: Example 4-1. The XSetWindowAttributes structure
+#+begin_src c
+typedef struct _XSetWindowAttributes {
+   Pixmap background_pixmap;    /* Pixmap, None, or ParentRelative */
+   long background_pixel;       /* Background pixel value */
+   Pixmap border_pixmap;        /* Pixmap, None, or CopyFromParent */
+   int bit_gravity;             /* One of the bit gravity symbols */
+   int win_gravity;             /* One of the window gravity symbols */
+   int backing_store;           /* NotUseful, WhenMapped, or Always */
+   long backing_bitplanes;      /* Planes to be preserved, if possible */
+   long backing_pixel;          /* Value to use in restoring planes */
+   Bool save_under;             /* Should bits under window be saved */
+   long event_mask;             /* Events that should be queued */
+   long do_not_propagate_mask;  /* Events that shouldn’t propagate */
+   Bool override_redirect;      /* Override redirected configuration
+                                ,* requests */
+   Colormap colormap;           /* Colormap associated with window */
+   Cursor cursor;               /* Cursor to be displayed or None */
+} XSetWindowAttributes;
+#+end_src
+
++ After setting the elements of the =XSetWindowAttributes= to the desired values, you have to set the =valuemask= argument that represent which members are to be changed in the server's internal structure.
+  - A symbol (begining with =CW=) are to be combined with the bitwise OR operator.
+
+#+name: Table 4-1 Window Attribute Mask Symbols
+| Member                | Flag               | bit |
+|-----------------------+--------------------+-----|
+| background_pixmap     | CWBackPixmap       |   0 |
+| background_pixel      | CWBackPixel        |   1 |
+| border_pixmap         | CWBorderPixmap     |   2 |
+| border_pixel          | CWBorderPixel      |   3 |
+| bit_gravity           | CWBitGravity       |   4 |
+| win_gravity           | CWWinGravity       |   5 |
+| backing_store         | CWBackingStore     |   6 |
+| backing_planes        | CWBackingPlanes    |   7 |
+| backing_pixel         | CWBackingPixel     |   8 |
+| override_redirect     | CWOverrideRedirect |   9 |
+| save_under            | CWSaveUnder        |  10 |
+| event_mask            | CWEventMask        |  11 |
+| do_not_propagate_mask | CWDontPropagate    |  12 |
+| colormap              | CWColormap         |  13 |
+| cursor                | CWCursor           |  14 |
+
+Example: you want to set initial values of the background and border pixel values, you would follow the procedure:
+
+#+name: Example 4-2. Setting window attributes while creating a window
+#+begin_src c
+Display *display;
+Window parent, window;
+int x, y;
+unsigned int width, height, border_width;
+int depth;
+int screen_num;
+Visual *visual;
+unsigned int class;
+XSetWindowAttributes setwinattr;
+unsigned long valuemask;
+/* (Must open display) */
+screen_num = DefaultScreen(display);
+valuemask = CWBackPixel | CWBorderPixel;
+setwinattr.background_pixel = WhitePixel(display, screen_num);
+setwinattr.border_pixel = BlackPixel(display, screen_num);
+window = XCreateWindow(display, parent, x, y, width, height,
+   border_width, depth, class, visual, valuemask, &setwinattr);
+#+end_src
+
+If the window already exists, you follow the procedure:
+
+#+name: Example 4-3. Changing window attributes of existing window
+#+begin_src c
+Display *display;
+Window window;
+XSetWindowAttributes setwinattr;
+unsigned long valuemask;
+/* (Must open display, create window) */
+valuemask = CWBackPixel | CWBorderPixel;
+setwinattr.background_pixel = WhitePixel(display, screen_num);
+setwinattr.border_pixel = BlackPixel(display, screen_num);
+XChangeWindowAttributes(display, window, valuemask, &setwinattr);
+#+end_src
+
++ Some attributes have specifig routines for setting them:
+
+#+name: Table 4-2 Attributes that can be set individually
+| Attribute         | Routine                      |
+|-------------------+------------------------------|
+| background_pixmap | XSetWindowBackgroundPixmap() |
+| background_pixel  | XSetWindowBackgroundPixel()  |
+| border_pixmap     | XSetWindowBorderPixmap()     |
+| border_pixel      | XSetWindowBorderPixel()      |
+
+* Settable Attributes [4.3]
++ One group controls the appearance of a window.
+  - =background_pixel=
+  - =background_pixmap=
+  - =bordel_pixel=
+  - =border_pixmap=
+  - =cursor=
++ most clients will set the border, background, and cursor but use the default colormap
+
++ Another group is provided to allow clients to improme their drawing performance under certain conditions.
+  - =backing_pixel=
+  - =backing_planes=
+  - =backing_store=
+  - =bit_gravity=
+  - =save_under=
++ These do not affect the appearance or operation of a client.
++ It is advisable to consider =bit_gravity= when designing a client, but this can be considered after the client's funcionality is complete.
+
++ The =event_mask= and =do_not_propagate_mask= attributes control the selection and propagation of events.
+
++ The =win_gravity= attribute provides a means for relocating a window automatically when its parent is resized.
+  - Simplifies the code for repositioning subwindows when they are resized.
+
++ The =override_redirect= attribute controls whether requests for map or reconfigure the window can be intercepted by the WM.
+  - Mean to be set for most temporary types of windows such as pop-up menus.
+  - In practice, only affects the children of the root window.
+
++ The class (=InputOutput= or =InputOnly=) can be specified in the call to =XCreateWindow()=, or is =InputOutput= if created with =XCreateSimpleWindow()=.
++ =InputOnly= windows have only the following subset of attributes:
+  - =win_gravity=
+  - =event_mask=
+  - =do_not_propagate_mask=
+  - =override_redirect=
+  - =cursor=
+
+** The Window Background [4.3.1]
++ It's the drawing surface on which other graphics are drawn.
+  - Solid color or patterned with a pixmap.
+  - Users expect to be able to specify the background color on the command line or in the resource database.
+  - If a pixmap is used, you should create a pixmap with 2 colors specified by the user.
+
++ 2 attributes that control the background are
+  - =background_pixmap=, set by =XSetWindowBackgroundPixmap()=
+  - =background_pixel=, set by =XSetWindowBackground()=
++ Each one can take preference over the other, the winner being the one that is set last. If both are set in the same call to =XCreateWindow()= or =XChangeWindowAttributes()=, the =background_pixel= value is used.
+
++ Background of exposed aread of windows is automatically drawn by the server, *regardless of whether the app selects =Expose= events.*
++ However, changes in background attributes will not take effect until the server generates the next =Expose= event on that window.
+  - To make the change instant, call =XClearWindow()= and flush the request buffer with =XFlush()=.
+
+*** =background_pixmap= [4.3.1.1]
+*see book*
+
+*** =background_pixel= [4.3.1.2]
+*see book*
+
+** The Window Border [4.3.2]
++ Like window background, can be solid color or tiled with a pixmap.
++ Changes to border attributes are reflected immediately, no need to flush request buffer or call =XClearWindow()=.
+
++ 2 attributes that control the window border are
+  - =border_pixmap=, set by =XSetWindowBorderPixmap()=
+  - =border_pixel=, set by =XSetWindowBorder()=
++ Precedence works the same as background.
+
+*** =border_pixmap= [4.3.1.1]
+*see book*
+
+*** =border_pixel= [4.3.1.2]
+*see book*
+
+** Bit Gravity [4.3.3]
++ =bit_gravity= tells the server where to put the existing bits in the larger or smaller window.
+  - Allows some clients (not all can take advantage of this) to avoid redrawing parts of their windows.
++ Is never necessary.
+  - Is used to improve performance in some cases.
+
++ =bit_gravity= has 11 possible values:
+  - =ForgetGravity= (default) specifies that window contents should always be discarded after a size change.
+  - =StaticGravity= specifies that window contents should not move relative to the origin of the root window.
++ Each constant below specifies where the old window contents should be placed in the resized window:
+  - =NorthWestGravity=
+  - =NorthGravity=
+  - =NorthEastGravity=
+  - =WestGravity=
+  - =CenterGravity=
+  - =EastGravity=
+  - =SouthWestGravity=
+  - =SouthGravity=
+  - =SouthEastGravity=
+[[./imgs/fig4_1.png]]
++ When an =Expose= event arrives, the app need only redraw the new blank spaces.
+  - No =Expose= event will be generated on the area that was saved because of =bit_gravity=
+
+** Window Gravity [4.3.4]
++ =win_gravity= controls the repositioning of subwindows when a parent window is resized.
++ Same shit but for subwindows.
+
+** Backing Store [4.3.5]
++ The _backing store_ automatically maintains the contents of a window while it is obscured or even while it is unmapped.
+  - Like having a copy of the window saved in a pixmap, automatically copied to the screen whenever necessary to keep the visible contents up to date.
++ Not available in some servers.
+
++ A client might use this feature to back up a window the client is incapable of redrawing for some reason or to be able to draw into a window that is obscured or unmapped.
+
+** Saving Under [4.3.6]
++ The =save_under= attribute controls whether the contents of the screen beneath a window should be preserved just before the window is mapped and replaced just after it is unmapped.
+  - Most useful for pop-up windows, which need to be on screen only briefly.
+  - No =Expose= events will be sent to the windows that are exposed when the pop-up window is unmapped, saving the time necessary to redraw their contents.
+
++ *Different from =backing_store= because: =save_under= may save portions of several windows beneath a window for the duration of the appearance of the window on the screen, while backing store saves the contents of a single window while it is mapped or even unmapped, depending on the attributes.*
+
+** Event Handling [4.3.7]
++ =event_mask= and =do_not_propagate_mask= attributes control the propagation of events through the window hierarchy.
++ More info on events in Chap. 8.
+
+** Substructure Redirect Override [4.3.8]
++ _substructure redirect_ allows a WM to intercept any requests to map, move, resize or change the border width of windows.
+  - The WM can then modify these requests if necessary, to ensure that they meet its window layout policy.
++ setting =override_redirect= to =True= for a window allows a window to be mapped, moved, resized, or its border width changed without the intervention of the WM.
+  - Usually done for menus that are frequently mapped and almost ummediately unmapped again.
+
+** Colormap [4.3.9]
++ =colormap= attribute specifies which colormap should be used to interpret the pixel values in a window.
++ For majority of clients that do not have without special color needs, this attribute can be left in its default state.
+** Cursor [4.3.10]
++ It's the object that tracks the pointer on the screen.
++ In X, a _cursor_ is a server resource which defines a cursor pattern, its colors, and the point within the pattern that will be reported in events (called the _hotspot_).
+
+** Default Attributes [4.3.11]
++ see table 4-3 summarizing the default attributes for an =InputOutput= window.
+
+* Information from the XWindowAttributes Structure [4.4]
++ Many window characteristics described in Chap. 2, including window configuration, are also stored with the window attributes by the server but are not *programmable* by using =XChangeWindowAttributes()=.
+
+#+name: Example 4-4. Read-only XWindowAttributes members
+#+begin_src c
+Example 4−4.  Read−only XWindowAttributes members
+typedef struct {
+    /* Members writable with XChangeWindowAttributes omitted */
+   .
+   .
+   .
+    /* Window geometry −− set by window configuration functions
+     ,* in cooperation with window manager */
+    int x, y;             /* Location of window */
+    int width, height;    /* Width and height of window */
+    int border_width;     /* Border width of window */
+    /* This is the event_mask attribute set by XSelectInput */
+    long your_event_mask; /* My event mask */
+    /* Set when the window is created, not changeable */
+    Visual *visual;       /* The associated visual structure */
+    int class;            /* InputOutput, InputOnly */
+    int depth;            /* Depth of window */
+    Screen *screen;       /* Pointer to screen the window is on */
+    /* Server sets these members */
+    Window root;          /* Root of screen containing window */
+    Bool map_installed;   /* Is colormap currently installed */
+    int map_state;        /* IsUnmapped, IsUnviewable, or
+                          ,* IsViewable */
+    long all_event_masks; /* Events all clients have interest in */
+} XWindowAttributes;
+#+end_src

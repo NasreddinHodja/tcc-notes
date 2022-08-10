@@ -1,7 +1,6 @@
-#+title: Chap 2
+#+title: Chap 2: X Concepts
 
-* X Concepts [2]
-** How Xlib Works [2.1]
+* How Xlib Works [2.1]
 Why X was designed:
 1. Provide windows on bitmapped terminals.
    - Done in a way that it is easily portable to many different brands of hardware.
@@ -14,7 +13,7 @@ To work over a network, there had to be programs that run on both ends of the co
 + The end that controlls the display and input devices is the *server*.
 + At the other end are *clients* -- programs written using Xlib to interface with the X protocol.
 
-*** The X Protocol [2.1.1]
+** The X Protocol [2.1.1]
 + Specifies what makes up each packet of information transferred between the server and Xlib in both directions.
 + There are 4 types of packets that get transferred via the protocol:
   1. requests
@@ -39,7 +38,7 @@ To work over a network, there had to be programs that run on both ends of the co
   - Errors are sent to an error-handling routine in Xlib.
   - Default error handlers (print message and exit) can be replaces by a client-specific error-handling routine.
 
-*** Buffering [2.1.2]
+** Buffering [2.1.2]
 + Xlib saves up requests instead of sending them to the server immediately, so that the *client program can continue running instead of waiting to gain access to the network after every Xlib call*.
   - Possible because most Xlib calls do not require immediate action by the server.
   - Increases performance of most networks: transactions are longer and less numerous, reducing total overhead involved.
@@ -65,7 +64,7 @@ Using Xlib calls, the client can flush the connection in three ways:
   - It means that errors are not discovered by the server until the requests arrive at the server and are processed, which happens only after Xlib flushes its request buffer.
   - In other words, several Xlib routines may be called before an error caused by an earlier routine is reported.
 
-*** Resources [2.1.3]
+** Resources [2.1.3]
 X uses several techniques to reduce network traffic.
 + One major is to have the server maintain complex abstractions such as windows or fonts and have the client allocate an integer ID number for each one as a nickname.
 + Each of theses abstractions are called a /resourse./
@@ -74,7 +73,7 @@ X uses several techniques to reduce network traffic.
 + Whenever an operation is to be performed on a window (or any other resource), the ID of the window is used in one argument to the Xlib routine.
   - Instead of sending the entire struct!
 
-*** Properties and Atoms [2.1.4]
+** Properties and Atoms [2.1.4]
 + A /property/ is a packet of information associated with a window, made available to all the clients running under a server.
   - Used by clients to store information that other clients might nedd or want to know and to read that information when set by other clients.
 
@@ -98,7 +97,7 @@ X uses several techniques to reduce network traffic.
 
 + /Standard properties/ are a minimum set that an application should specify.
 
-*** The Window Manager [2.1.5]
+** The Window Manager [2.1.5]
 + Just another client written with Xlib but, by convention, it is given special responsabilities.
 + Mediates competing demands for the physical resources of a display, including screen space and colormap.
 + Most WMs decorate windows with a titlebar with buttons.
@@ -123,11 +122,11 @@ Most WMs have the ability to start and kill apps.
   - They can usually start only xterm and a few other basic clients..
   - A true session manager can be a separate client.
 
-** What are X Windows? [2.2]
+* What are X Windows? [2.2]
 + Windows currently in use are placed so that they are at least partially visible.
 + Scrollbars, titlebar, command buttons, and other features of the UI are actually separate windows that provide information to the user or allow for input providing convenient control.
 
-*** Window Characteristics [2.2.1]
+** Window Characteristics [2.2.1]
 + A window always has a /parent/ window, assigned when the window is created.
   - The window is contained within the limits of its parent.
   - The window cannot display output in areas outside itself
@@ -166,7 +165,7 @@ Most WMs have the ability to start and kill apps.
   - Which colormap is used to interpret pixel values drawn in this window?
   - Which cursor should be displayed when the pointer is in this window?
 
-*** Window Hierarchy [2.2.2]
+** Window Hierarchy [2.2.2]
 + The children of the root window are special, because they are the top-level windows of each app and they are managed by the WM.
 + The children of these windows are used to create app features like command buttons and scrollbars
 
@@ -178,14 +177,14 @@ These are the terms used to describe subsets of the window hierarchy:
 + _Descendants_: The children of a window, their children, and so on. Also called /inferiors/.
 + _Ancestors_: The parent of a window, their parent, and so on. Also called /superiors/.
 
-*** Window Staking Order [2.2.3]
+** Window Staking Order [2.2.3]
 + There are various routines that raise, lower, or circulate windows relative to their siblings.
   - These do now affect the ancestors.
 
 + Child windows always stay in front of their parent.
   - When a window with children is moved in the stacking order, all its child windows move with it.
 
-*** Mapping and Visibility [2.2.4]
+** Mapping and Visibility [2.2.4]
 + A new window does not immediately appear on the screen.
 + /Mapping/ marks a window as eligible for display.
   - If it is not obscured by siblings or siblings of ancestors, it may be visible, and only then can it be drawn.
@@ -209,8 +208,8 @@ A number of factors can affect whether any window is visible:
 
 + Window configuration and window attributes are maintained when a window is unmapped.
 
-** Introduction to X Graphics [2.3]
-*** Pixels and Colors [2.3.1]
+* Introduction to X Graphics [2.3]
+** Pixels and Colors [2.3.1]
 + The state of the multiple bits assigned to each pixel is used as an index to a lookup table called a /colormap/.
 
 + The colormap contains an array of red, green and blue (RGB) triples.
@@ -223,7 +222,7 @@ A number of factors can affect whether any window is visible:
 + Note that each window can potentially specify a different colormap.
   - This is the significance of the fact that the colormap is a window attribute.
 
-*** Pixels and Planes [2.3.2]
+** Pixels and Planes [2.3.2]
 + The number of bits per pixel is also referred to as the number of /planes/ in the graphics display.
 + X11 supports up to 32 planes.
 + The number of colors that can be /simultaneously/ displayed on the screen is =2^n=, where n is the number of planes in the display.
@@ -232,7 +231,7 @@ A number of factors can affect whether any window is visible:
 
 + The macros =BlackPixel()= and =WhitePixel()= return pixel values that map to black and white usingg the default colormap of that screen.
 
-*** Pixmaps and Drawables [2.3.3]
+** Pixmaps and Drawables [2.3.3]
 + Pixmaps are also valid destinations for most graphics requests.
 + A /pixmap/ is a block of off-screen memory in the server.
 + Windows and pixmaps are collectively known as /drawables/.
@@ -253,7 +252,7 @@ A number of factors can affect whether any window is visible:
 + A pixmap of depth 1 is know as a /bitmap/, though there is no separate type or resource called Bitmap.
   - A Bitmap is a 2-dimensional array of bits used for many purposes including cursor definitions, fonts, and templates for 2-color pictures.
 
-*** Drawing and the Graphics Context [2.3.4]
+** Drawing and the Graphics Context [2.3.4]
 + Drawing routines are called /graphics primitives/.
 
 + A server resource called /graphics context/ (GC) specifies the variables that are not specified (by other arguments to graphics primitives), such as the line width, colors, and fill patterns.
@@ -265,15 +264,15 @@ A number of factors can affect whether any window is visible:
 + More than one GC can be created, and each can be set with different values.
   - Programs can switch between GCs and get different effects with the same graphics primitive.
 
-*** Tiles and Stipples [2.3.5]
+** Tiles and Stipples [2.3.5]
 + A /tile/ is a pixmap with the same depth as the drawable it is used to pattern.
   - Typically 16x16 pixels but can be other sizes.
 
 + A /stipple/ is a pixmap of depth 1.
   - Used in conjunction with a foreground pixel value and somtiems a baackground pixel value to pattern an area in a way similar to a tile.
 
-** More on Window Characteristics [2.4]
-*** Window Attributes [2.4.1]
+* More on Window Characteristics [2.4]
+** Window Attributes [2.4.1]
 The attributes controll the following window features:
 + Background: can be solid color, tiled pixmap, or transparent.
 + Border: solid color or tiled pixmap.
@@ -286,11 +285,11 @@ The attributes controll the following window features:
 + Colormap: determines which virtual colormap should be used for this window.
 + Cursor: determines which cursor should be displayed when the pointer is in this window.
 
-*** Window Configuration [2.4.2]
+** Window Configuration [2.4.2]
 + Position, width and height, boder width, and stacking position.
 + A change in window configuration must be done in cooperation with the WM.
 
-*** Class: InputOutput and InputOnly Windows. [2.4.3]
+** Class: InputOutput and InputOnly Windows. [2.4.3]
 + =InputOnly= cannot be used as a drawable.
   - They have a limited set of window attributes,
   - no border,
@@ -300,7 +299,7 @@ The attributes controll the following window features:
 
 + Window class is assigned at creation and cannot be changed.
 
-*** Depth and Visual [2.4.4]
+** Depth and Visual [2.4.4]
 + Assigned at creation and cannot be changed.
 
 + /Depth/ is the number of planes that are to be used to represent gray scales or color within a window.
@@ -312,22 +311,22 @@ The attributes controll the following window features:
   - A screen may support one or multiple visuals.
   - =XVisualInfo= structure contains all the information about a particular visual.
 
-*** Icons [2.4.5]
+** Icons [2.4.5]
 + An /icon/ is a small marker window that indicates that a larger "main" window exists and is available but not currently mapped on the screen.
 
 + Most WMs allow a user to /iconify/ an app to get it out of the way without destroying it.
 
 + Managed and created by the WM.
 
-*** Special Characteristics of the Root Window [2.4.6]
+** Special Characteristics of the Root Window [2.4.6]
 + Created when X server is initialized.
 + =InputOutput=.
 + Always mapped.
 + Size can't change.
 + 0 width border.
 
-** Introduction to Events [2.5]
-*** What is an Event? [2.5.1]
+* Introduction to Events [2.5]
+** What is an Event? [2.5.1]
 + It's a packet of information that is generated by the serve when certain actions occur and is queued for later use by the client.
   - They are read and processed at any time or order but usually they are in the order in which they occurred.
 
@@ -337,7 +336,7 @@ The attributes controll the following window features:
 
 + A third group are to allow various clients to communicate with each other and with the WM.
 
-*** Selection and Propagation of Events [2.5.2]
+** Selection and Propagation of Events [2.5.2]
 + A client must select the event type that it wants the server to send for each window.
   - Selection is made by =XSelectInput()=, which sets the =event_mask= window attribute, by setting that attribute with =XChangeWindowAttributes()=, or when calling =XCreateWindow()=
 
@@ -354,7 +353,7 @@ The attributes controll the following window features:
   - A duplicate event is sent to each window and propagate independently up.
   - This is rarely done.
 
-*** The Event Queue [2.5.3]
+** The Event Queue [2.5.3]
 + Each client has its own event queue which receives the selected events in the order they are sent by the server.
 
 + The client then can remove each event at any time and process it according to its type and the other information in each event structure.
@@ -363,7 +362,7 @@ The attributes controll the following window features:
 
 + Events can also be created by a program and sent to the WM or other programs.
 
-*** An Event Structure [2.5.4]
+** An Event Structure [2.5.4]
 + =Expose= is one of the most important event types.
   - Generated when an area of a window becomes visible on the screen and indicates that the client must redraw the area.
 #+begin_src c
@@ -379,21 +378,21 @@ typedef struct {
 } XExposeEvent;
 #+end_src
 
-*** The Event Loop [2.5.5]
+** The Event Loop [2.5.5]
 + Every program contains an event loop in which each event is received and processed.
   - Normally, with a =while= and an event-getting routine at the beginning followed by a =switch=
 
 + When a window is first mapped, the first function of the program must be to read the exposure event that is generated by mapping the window.
 
-** How to program with Xlib [2.6]
-*** Designing an X Application [2.6.1]
+* How to program with Xlib [2.6]
+** Designing an X Application [2.6.1]
 From the user's standpoint, almost any app under any window system will do the obvious things:
 + create a window on the screen of an appropriate size,
 + determine a position for some text and/or graphics within the window,
 + draw into the window, and accept keyboard and/or pointer input,
 + changing the screen accordingly.
 
-**** Designing Requirements [2.6.1.1]
+*** Designing Requirements [2.6.1.1]
 Following are the things that must be done for the app to operate properly under X but that the average user might not notice or know about.
 
 + X allow workstations to be connected in a network which any host or node may run X programs and display them on any other node, given permission.
@@ -411,7 +410,7 @@ Following are the things that must be done for the app to operate properly under
 
 + The user may resize your app, so it should be capable of recalculating the dimensions and placement of subwindows and graphics to fit the given window.
 
-**** The User Interface [2.6.1.2]
+*** The User Interface [2.6.1.2]
 + The first step in designing an app will be to determine what its features will be. Determining how user will invoke those features is probably the next step.
   - This means designing the user interface.
 
@@ -423,15 +422,15 @@ Following are the things that must be done for the app to operate properly under
 
 + It is recommended (before the code) to draw out the hierarchy of windows and the types of events selected by each one and then drawing in the events that will be propagated to ancestor windows.
 
-*** Writting an X Application [2.6.2]
-**** Resources and User Customizability [2.6.2.1]
+** Writting an X Application [2.6.2]
+*** Resources and User Customizability [2.6.2.1]
 + An app should allow the user to specify the colors of all windows, the font to use, the display and screen to use, the initial size and position of the application, and a large number of other standard and app specific options.
 
 + A user specifies optios through /resources/. (different from /server resource/) (key/pair values)
   - They place a desired options in a file using a particular format, and runs the X app =xrdb= specifying this file.
   - xrdb places a property on the root window whose value is the contents of this file.
 
-**** Naming Conventions [2.6.2.3]
+*** Naming Conventions [2.6.2.3]
 The major conventions are:
 + All Xlib functions begin with an "X".
   - Compounds are constructed by capitalizing the first letter of each word.
@@ -449,7 +448,7 @@ The major conventions are:
   - User func name should have the first letter lower case to and not "X".
   - User constants should be all upper case.
 
-**** Using Structures, Symbols, and Masks [2.6.2.4]
+*** Using Structures, Symbols, and Masks [2.6.2.4]
 We will describe how structs and constants are typically used so that the idea will be familiar when we see examples.
 
 + Pointers to structures are the major way of specifying data to and returning data from Xlib routines.
@@ -466,11 +465,11 @@ We will describe how structs and constants are typically used so that the idea w
 
 + Defined constants are also used for predefined atoms (int id of a property).
 
-**** Performancec Optimizing [2.6.2.5]
+*** Performancec Optimizing [2.6.2.5]
 + Whenever possible, use Xlib funcs that do not require protocol replies (especially in the event loop).
 + In general, keep the feedback loop between the user's actions and the program's response as short as possible.
 
-*** Debuggin an X Application [2.6.3]
+** Debuggin an X Application [2.6.3]
 + A good debugger such as =dbx= avoids the need for constant =printf=.
 + =xwininfo= is good for displaying information about a window.
 + =xprop= displays the name, type and value of each prop set on a window.
@@ -492,7 +491,7 @@ Here are some miscellaneous tests you should put in your app:
 + What happens when you type function keys or the other unique keys on a particular keyboard?
 + Is it possible to crash the app by specifying the wrong set of resources or cmd line args?
 
-**** Errors [2.6.3.1]
+*** Errors [2.6.3.1]
 There are 3 levels of error handling in programs using Xlib.
 + The 1st level we implement ourselves by monitoring the return status of the routines that *create sever resources*.
   - ex: A client should always check to see whether it was successfully connected to the display server with =XOpenDisplay()= before proceeding. If this connection did not succeed, the client should print a message to stderr indicating what happened and which server it attempted to connect to.
@@ -505,7 +504,7 @@ There are 3 levels of error handling in programs using Xlib.
 
 + Only =XErrorHandler= (or the one you define) receives error events. These events can't be selected or received by windows.
 
-**** The =XErrorEvent= Structure [2.6.3.2]
+*** The =XErrorEvent= Structure [2.6.3.2]
 #+begin_src c
 typedef struct _XErrorEvent {
     int type;
@@ -524,12 +523,12 @@ typedef struct _XErrorEvent {
 + _minor_code_ is a zero unless the request is part of an extension. If it is, the minor_code indicates which request in the extension that caused the error.
 + _resource_id_ indicates of the server resources (window, colormap, etc.) that was associated with the request that caused the error.
 
-**** The Synchronizing Errors [2.6.3.3]
+*** The Synchronizing Errors [2.6.3.3]
 Since error events are not displayed precisely when they occur, it is often informative to loop up the protocol request as well as the error code to determine which function the error occured in.
 + *You can't rely on the debuffer to indicate where the error occurred because of Xlib's request buffering and other delays.*
 + Use =XSynchronize()= to make sure that protocol errors are displayed as soon as they occur. When =XSynchronize()= is invoked, the performance of graphics will be *drastically reduces*. (same as setting the global var =_Xdebug= to any nonzero value when running a program under a debugger)
 
-**** Software interrupts [2.6.3.4]
+*** Software interrupts [2.6.3.4]
 + *Xlib does not handle software interrupts.*
 + Therefore if you recusively call back into Xlib from a signal handler, the program will *hang or crash*.
   - This is mostly an issue on systems that feature threads or multiple processors.

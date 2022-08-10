@@ -1,6 +1,5 @@
-#+title: Chap 3
+#+title: Chap 3: Basic Window Program
 
-* Basic Window Program [3]
 Every Xlib program has a similar structure. This chap shows a simple program that puts up windows and handles events in that window.
 
 The program will perform these operations:
@@ -21,14 +20,14 @@ The program does not perform the following operations, which are required of a r
 + Allow the user to specify command line options and read the resource database.
 + Handle colors.
 
-** Running the Program [3.1]
+* Running the Program [3.1]
 + The program just displays a window with some text and graphics drawn into it.
 
-** The Main of basicwin [3.2]
+* The Main of basicwin [3.2]
 + The main does everything described at the start of this chapter except create the GC, load the font, and draw the text and graphics.
   - These are done in the =draw_graphics=, =draw_text=, =get_GC= and =load_font= routines.
 
-*** Include Files and Declarations [3.2.1]
+** Include Files and Declarations [3.2.1]
 #+name: Example 3-1. basicwin -- include files and declarations
 #+begin_src c
 /* Xlib include files */
@@ -89,7 +88,7 @@ These are the types that appear: =Window=, =Display=, =Pixmap=, =XSizeHints=, =X
 + =XSizeHints=: Structure that is used to provide the window manager with information about the preferred sizes and size increments for the top-level window of the application.
 + =XEvent=: Union that stores information about an event. It can be interpreted as one of many individual structure types depending on the type of event.
 
-*** Connection to a Server [3.2.2]
+** Connection to a Server [3.2.2]
 #+name: Example 3-2. basicwin -- connecting to the server
 #+begin_src c
 char *display_name = NULL;
@@ -128,11 +127,11 @@ screen_ptr = DefaultScreenOfDisplay(display);
 + After connecting, we can begin to set up vars for use in the rest of the program.
   - =screen_num= is the return value of the =DefaultScreen()= macro. Can be set to any integer between 0 and =ScreenCount(display) - 1=.
 
-*** Display Macros [3.2.3]
+** Display Macros [3.2.3]
 We just described them.
 + They all get info from the =Display= structure returned by =XOpenDisplay()
 
-*** Getting Window Information [3.2.4]
+** Getting Window Information [3.2.4]
 Most clients need to know the size of the screen.
 + You can access the =Display= structure to get information abou the root window.
   - More efficient, gets information from the local structure. Uses macros to access the information.
@@ -217,7 +216,7 @@ display_width = windowattr.width;
 display_height = windowattr.height;
 #+end_src
 
-*** Creating Windows [3.2.5]
+** Creating Windows [3.2.5]
 The next step is to create and place windows.
 
 + A window's position relative to its parent is determined as the window is created, since these coordinates are specified as arguments to the routine that creates the window.
@@ -262,7 +261,7 @@ win = XCreateSimpleWindow(
 + =XCreateSimpleWindow()= is used when we want the window to inherit the parents attributes that are not specified as arguments.
 + =XCreateWindow()= is used when we want to specify any or all attributes instead of inheriting them from parent.
 
-*** Color Strategy [3.2.6]
+** Color Strategy [3.2.6]
 + Applications do not choose pixel colors, they choose colors and are returned pixel values by a routine they call that allocates colors or they get pixel values from display macros =BackPixel()= and =WhitePixel()=.
 
 + We use the the =WhitePixel()= macro to specify the background pixel value and set the foreground in the GC to be the contrasting value returned by =BackPixel()=.
@@ -272,7 +271,7 @@ win = XCreateSimpleWindow(
 
 + Adding color is described in Chap 7.
 
-*** Preparing an Icon Pixmap [3.2.7]
+** Preparing an Icon Pixmap [3.2.7]
 + An app should create an icon design for itself, so that if a window manager is running and the user iconifies the application, the icon will be recognizable as belonging to the particular application.
 
 The program should take 2 steps in creating the pixmap:
@@ -324,7 +323,7 @@ static char icon_bitmap_bits[] = {
 + This format is used in =XCreateBitmapFromData()=, =XWriteBitmapFile()=, =XReadBitmapFile()=
   - An app can also read from a file instead of =#define=.
 
-*** Communicating with the Window Manager [3.2.8]
+** Communicating with the Window Manager [3.2.8]
 + Before mapping the window, an app must set the standard properties to tell the WM at least a few essential things about the app.
 + The standard properties are part of the convention for communication between each app and the WM.
   - Associated with the top level window of an app.
@@ -456,7 +455,7 @@ typedef struct {
   - =min_height= and =min_width= should be set to minimum dimensions (in pixels) required so that the app can still function normally.
   - Many WMs will not allow the user to resize windows beyond these limits.
 
-*** Selecting Desired Event Types [3.2.9]
+** Selecting Desired Event Types [3.2.9]
 + Next step is to select the event types that the app will require.
 + Our app must receive events for 3 reasons:
   - redraw itself in case of exposure;
@@ -477,14 +476,14 @@ XSelectInput(display, win, ExposureMask | KeyPressMask |
 + =XCreateWindow()= allows you to select events at the same time by specifying the =event_mask= attribute.
   - More efficient than calling =XSelectInput()= separately.
 
-*** Creating Server Resources [3.2.10]
+** Creating Server Resources [3.2.10]
 + Next step is to create any other server resources that are needed.
   - They should be created only once and the ID kept rather than creating and deleting them in frequently called subroutines.
 
 + In our app, we still need to load a font for the text and to create a GC to draw both text and graphics.
   - These operations are done in the routines =load_font()= and =get_GC()=. (called just before mapping the window).(will be described in Chap 5)
 
-*** Window Mapping [3.2.11]
+** Window Mapping [3.2.11]
 + Next step is to display the window.
 #+name: Example 3-12. basicwin -- mapping the window
 #+begin_src c
@@ -501,7 +500,7 @@ XMapWindow(display, win);
   5. The initial mapping of the top-level window is a special case, since the window's visibility may  be delayed by the WM.
      - For complicated reasons, an app must wait for the first =Expose= event before assuming that its window is visible and drawing to it.
 
-*** Flushing the Output Buffer [3.2.12]
+** Flushing the Output Buffer [3.2.12]
 + =XMapWindow()= causes an X protocol request that instructs the server to display the window on the screen.
   - This request (like all) is queued until an event-reading routine such as =XNextEvent()=, a routine that queries the server (most routine names contain =Fetch=, =Get=, =Query=), or a routine such as =XFlush()= or =XSync= is called.
   - *The server operates more efficiently over the network when X protocol requeests are sent in groups.*
@@ -511,7 +510,7 @@ XMapWindow(display, win);
   - The =XFlush()= command instructs the server to process all queued output requests right away.
   - =XFlush()= is generally necessary only when an app needs to draw periodically even without user input.
 
-*** Setting Up an Event-gathering Loop [3.2.13]
+** Setting Up an Event-gathering Loop [3.2.13]
 + X programs are event-driven, which means that after stting up all the server resources and window manager hints, the program performs actions only in response to events.
 + The event-gathering loop is the standard way to respond to events, performing the appropriate action depending on the type of the event and the information contained in the event structure.
 + It is normally a closed loop, in which one of the event types with certain contents defined by the app indicates that the user wants to exit.
@@ -572,7 +571,7 @@ while (1)  {
 #+end_src
 + A =ConfigureNotify= event is always followed by one or more =Expose= events.
 
-**** Repainting the Window [3.2.13.1]
+*** Repainting the Window [3.2.13.1]
 + =Expose= events occur when a window becomes visible on the screen, after being obscured or unmapped.
   - They occur because the X Window System does not normally save the contents or regions of windows obscured by other windows or not mapped.
   - The contents of windows need to be redrawn when they are exposed.
@@ -684,11 +683,11 @@ while (1)  {
   - Resizing the window is something that backing store can't fully take care of. Because it is assumed that most apps need to recalculate the dimensions of their contents to fit a new window size.
     - The app can set an attribute called bit gravity to retain part of the window during a resize, but part of the window is still going to need redrawing if the window is resized larger.
 
-*** Where Can I Draw? [3.2.14]
+** Where Can I Draw? [3.2.14]
 + Drawing is allowed until the first =Expose= event arrives.
 + The reason involves a feature of X called substructure redirection.
 
-*** When Will My Drawing Appear [3.2.15]
+** When Will My Drawing Appear [3.2.15]
 + Graphics drawn may not appear on the screen immediately. This is because X is designed to buffer communications over a network.
 + The requests (to create windows, to map windows, or to draw into them) are queued up in Xlib, waiting for something to happen that requires an immediate communication with the server.
 + The queue of requests waiting to be sent to the server is called /request buffer/. The requests are accumulated in the request buffer until a call to:
@@ -704,7 +703,7 @@ Does it really take a lot of care to make sure that the request buffer gets flus
 + If an ap needs to get info from the server by making a call containing the word =Fetch=, =Get=, or =Query=, no problem is likely.
 + An output-only app that handles only =Expose= events would certainly need to call =XFlush()= once in a while.
 
-*** Handling REsizing of the Window [3.2.16]
+** Handling REsizing of the Window [3.2.16]
 + The =ConfigureNotify= event tells the app that the window was resized.
   - In this program, we pass this info to the routines that draw, so that they can position things properly.
   - We also see if the new size if less than the minimum useful size that we set as a size hint for the window manager.
@@ -731,7 +730,7 @@ case ConfigureNotify:
   .
 #+end_src
 
-*** Exiting the Program [3.2.17]
+** Exiting the Program [3.2.17]
 This program uses a key or button press to exit.
 + To cleanly exit, a client should free all the memory it has allocated, particularly X resources, ant then close the display connection with =XCloseDisplay()=
 
@@ -748,14 +747,14 @@ case KeyPress:
 
 + It is good practice to use =XCloseDisplay()= event though the connection to the server is closed automatically and a process exits.
 
-*** Error Handling [3.2.18]
+** Error Handling [3.2.18]
 + On the =XOpenDisplay()= call, we check for the error return, tell the user what server the attempt was made to connect, and exit gracefully.
 + For all other errors, we depend on the default error-handling mechanisms.
 
 + Not all protocol errors cause the error handler to be invoked.
   - Some errors are indicated by returned values of type =Status= on the appropriate routine. Any routine that returns =Status= will have need its return value tested.
 
-*** Summary [3.2.19]
+** Summary [3.2.19]
 The basic steps that we took are as follows:
 1. Open connection to server.
 2. Make sure connection succeeded, print error and exit if not.
@@ -771,4 +770,4 @@ The basic steps that we took are as follows:
 12. If event is of type ConfigureNotify, recalculate dimensions of window.
 13. If event is ButtonPress or KeyPress, close the display and exit.
 
-+ The order of these steps is important only up to the point where the window is mapped.
+14. The order of these steps is important only up to the point where the window is mapped.
