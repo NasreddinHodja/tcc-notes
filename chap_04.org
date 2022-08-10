@@ -1,4 +1,4 @@
-#+title: Chap 4: Window Attributes
+#+title: Chap. 4: Window Attributes
 
 + Control a window's:
   - background

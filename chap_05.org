@@ -1,3 +1,17 @@
-#+title: Chap 5
+#+title: Chap. 5: The Graphics Context
 
-* The Graphics Context [5]
++ Most of the details about how graphics are to be drawn are stored in a resourse called a _graphics context_ (GC).
+  - Stored in the server.
+
++ X routines that draw graphics are called _graphics primitives_.
+  - Dots, lines, text, images, and tile or fill areas.
+  - Will be described fully in Chap. 6 "Drawing Graphics and Text".
++ The GC contains the rest of information that the primitives don't explicitly take.
+  - To draw, you must first create a GC and set its values, then specify that GC as an argument in the graphics primitive.
++ *The graphics primitive specifies the general shape to draw, the GC specifies how to draw it.*
+
++ To predict the effect of the GC settings on a graphics primitive, it is useful to visualize the drawing process in a number of stages, even though in reality the drawing of each bit of each pixel is performed by the server in a single equation.
+  1. The 1st stage is pixel selection. As we just described pixel selection is spefified by the graphics primitive, in some cases along with the =line_width=, =clip_mask=, and other elements in the GC. The result of the first stage is a bitmap - a single rectangle of bits, with the pixels to be drawn set to one and the pixels not to be drawn set to zero.
+  2. The 2nd stage applies on or two colors or a pattern to the results of the 1st stage, resulting in a pixmap which has the same depth (number of bits per pixel) as the drawable. The output of the 2nd stage is referred to later in this chap as the _source_.
+  3. In the 3rd stage, a plane mask may be applied to select which planes of the drawable can be affected by the graphics request. This is done to play tricks with color, such as to draw temporary graphics that can be erased without erasing other things already drawin in a window, as demonstrated in Chap. 7 "Color". By default, the plane mask is all ones and therefore has no effect on what is drawn.
+  4. In the 4th stage, the pixel values resulting from stage 3 can be combined with what is already oon the screen using so-called _logical functions_. Most graphics are drawn by simply overwriting the existing graphics using a logical funcion of =GXcopy=, but there are useful tricks that can be played by using certain other logical functions.

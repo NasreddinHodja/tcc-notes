@@ -1,4 +1,4 @@
-#+title: Chap 3: Basic Window Program
+#+title: Chap. 3: Basic Window Program
 
 Every Xlib program has a similar structure. This chap shows a simple program that puts up windows and handles events in that window.
 

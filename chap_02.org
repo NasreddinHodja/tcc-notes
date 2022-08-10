@@ -1,4 +1,4 @@
-#+title: Chap 2: X Concepts
+#+title: Chap. 2: X Concepts
 
 * How Xlib Works [2.1]
 Why X was designed:
