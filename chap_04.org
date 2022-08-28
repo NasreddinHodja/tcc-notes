@@ -251,7 +251,6 @@ XChangeWindowAttributes(display, window, valuemask, &setwinattr);
 
 #+name: Example 4-4. Read-only XWindowAttributes members
 #+begin_src c
-Example 4−4.  Read−only XWindowAttributes members
 typedef struct {
     /* Members writable with XChangeWindowAttributes omitted */
    .

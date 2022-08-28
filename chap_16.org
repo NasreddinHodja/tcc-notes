@@ -1,0 +1,84 @@
+#+title: Chap. 16: Window Management
+
++ A WM is a program implemented with Xlib to control the layout of windows on the screen, responding to user requests to move, resize, raise, lower, or iconify windows.
++ The WM may also enforce a policy for window layout and provide a menu for commonly used shell commands.
+
+* Layout Policy [16.1]
++ A WM may have a policy on how *top-level windows* will be placed on the screen.
+
++ Within its window layout policy, a WM should honor thw window size and position hints returned by =XGetNormalHints()= and =XGetWMHints()= as closely as possible.
+
+* Substructure Redirection [16.2]
++ The WM enforces its window layout policy using substructure redirection.
+
++ The events that are selected by =SubstructureRedirectMask= and the routines that are intercepted are as follows:
+  - =CirculateRequest= events reports when an Xlib function, such as =XCirculateSubwindows()=, =XCirculateSubwindowsDown()=, =XCirculateSubwindowsUp()=, =XRestackWindows()=, is called to change the stacking order of a group of children.
+  - =ConfigureRequest= events report when an Xlib function such as =XConfigureWindow()=, =XLowerWindow()=, =XMoveResizeWindow()=, (...), is called to resize, move, restack or change the border width of a window.
+  - =MapRequest= events report when =XMapWindow()= or =XMapSubwindows()= is called to map a window.
+
++ When =SubstructureRedirectMask= is selected on the root window, the only time that a config request on a child of thw root window is not intercepted is when the =override_redirect= attribute of that child windows has been set to =True=.
+  - Intended for temporary pop-up windows that should not be reparented or affected by the WM's layout policy.
+
++ Substructure redirect allows the WM to separate the portion of itself that moves and resizes windows from the portion that enforces window policy.
+
+* Reparenting [16.3]
++ A WM can decorate windows on the screen with titlebars and place little boxes on the titlebar with which the window can be moved or resized.
+  - This is done with reparenting.
+
+* Window Save-set [16.4]
++ The save-set is a list of windows, usually maintained by the WM, but including only windows created by other clients. If the WM dies, all windows listed in the save-set will be reparented back to their closest living ancestor if they were reparented in the first place and mapped if the window manager has unmapped them so that it could map an icon.
++ Necessary because a WM may not exit normally.
+
+* Window Manager - Client Communications [16.5]
+** Reading the Hints [16.5.1]
++ Hints help the window manager conform to the needs of the application while at the same time letting it control window layout and policy.
+  - The WM gets the hints with the routines shown in Table 16-1.
+
+** Setting Icon Sizes [16.5.2]
++ It's the only hint that the WM should set for applications to read.
+
+** Window Manager Protocols [16.5.3]
++ See Section 12.3.3.2 "Window Manager Protocols - WM_PROTOCOLS"
+
+* Window Management Functions [16.6]
++ =XConfigureWindow()= is the most general routine.
++ =XMoveWindow()=, =XMoveResizeWindow()=, and =XResizeWindow()= are the routines to move and resize windows. =XSetBorderWidth()= change the border width of a window.
+
++ See rest in book.
+
+* A Basic Window Manager [16.7]
+** Operation of the Program [16.7.1]
++ Program provides for basic funtions for manipulating windows:
+  - =Raise= brings a window to the top of the stack, so that it is fully visible.
+  - =Lower= lowers the window to the bottom.
+  - =Resize= changes the size of a window, and raises it.
+  - =CirculateDn= moves the window on the bottom to the top.
+  - =CirculateUp= moves the window on the top to the bottom.
+  - =(De)Iconify= turns a window into a small marker window or vice versa.
+  - =Keybrd Focus= assigns all keyboard input to the selected window, regardless of the position of the pointer.
+  - =New Xterm= creates a new =xterm= window, and places it at the upper-left corner of the screen. You can then move or resize this window.
+  - =Exit= kills the program.
+
++ All input for the WM is supliet through the pointer.
+  - After choice is made but before operation is complete, the pointer is grabbed, so that all pointer input is directed to the menu window independent of the position of the pointer.
+
+** Description of main [16.7.2]
++ see code
+
+** Window Layering [16.7.3]
++ The menu is created by superimposing ten =InputOutput= child windows (=defs[]=) on one large =InputOutput= parent window (=menuwin=).
+
+** Selecting Input [16.7.4]
++ The =menuwin= requires no events, since it is there to tie together the menu panes.
++ =ButtonPress=, =ButtonRelease=, and =Expose= events are required for the panes, so they can accept a choice and redraw the pane in case anything obscures and then exposes part of all the menu.
+  - =ButtonRelease= events are selected so that we can verify menu choices my making sure the =ButtonRelease= happens in the same window as the =ButtonPress=.
++ =SubstructureNotifyMask= on the root window because we need to know when an app that winman has iconified have been killed.
+  - =CirculateNofity=, =ConfigureNotify= and =UnmapNotify= are sent inside and are useful for redrawing of highlighting background drawn around the focus window by winmap. This is done instead of selecting =Expose= events on the root window because we already have to get =SubstructureNotifyMask= so it improves performance a little.
+
+** Handling Input [16.7.5]
++ Routines used in =main= are:
+  - =XCheckTypedEvent()= allows you to choose the types of events to look for, monitors all windows, and doesn't wait even if no matrching event is on the queue.
+  - =XMaskEvent()= allows you to choose which events mask of the events to look for, monitoring all windows. I waits until an event arrives.
+  - =XNextEvent()= is used to get any type of event that occurs in a window. I waits until an event arrives.
+
++ These are described in [[./chap_08.org][Chap 8]] and [[./chap_09.org][Chap 9]].

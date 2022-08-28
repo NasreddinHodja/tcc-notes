@@ -1,0 +1,142 @@
+#+title: Chap. 6: Drawing Graphics and Text
+
+* Drawing [6.1]
++ Drawing primitives select the source pixels that will be operated on according to the GC.
++ See book for description of each.
+
+** The Request Size Limit [6.1.1]
++ There is a max number of objects that can be drawn with a single call, this number varies according to the server.
+  - Use =XMaxRequestSize()= to find it out.
+
+** Scaling Graphics [6.1.2]
++ Scaling based on pixels is not good because pixels may have different sizes depending on the screen.
++ The app should calculate the ratio of the size in mm of the screen to its size in pixels.
+
+** Example of Drawing Graphics [6.1.3]
++ All drawing routines are used in essentially the same way:
+  1. Create and set graphics context.
+  2. Calculate the dimensions and placement of what you want to draw.
+  3. Do the actual drawing.
+
+#+name: Example 6-1. The draw_graphics routine
+#+begin_src c
+draw_graphics(win, gc, window_width, window_height)
+Window win;
+GC gc;
+unsigned int window_width, window_height;
+{
+    int x, y;
+    unsigned int width, height;
+    height = window_height/2;
+    width = 3 * window_width/4;
+    x = window_width/2 − width/2;  /* Center */
+    y = window_height/2 − height/2;
+    XDrawRectangle(display, win, gc, x, y, width, height);
+}
+#+end_src
+
+** Filling [6.1.4]
++ Same as routines that draw lines but they fill an area.
+
+** Creating Bitmaps, Pixmaps, Tiles, and Stipples [6.1.5]
++ All are of type =Pixmap=.
++ Data for creating a pixmap can be included in a program at compile time or read in at run time.
+  - You must have a bitmap file created with =XWriteBitmapFile()= or the =bitmap= app.
++ See book for example on how to load bitmap.
+
+** Copying and Clearing Areas [6.1.6]
++ See book for =XClearWindow()=, =XClearArea()=, =XCopyArea()=, and =XCopyPlane()=.
+
+* Fonts and Text [6.2]
+** Character Format [6.2.1]
++ All X functions thet draws text has 2 versions:
+  - one that handles single-byte (8-bit) fonts and
+  - one that handles two-byte (16-bit) fonts.
++ Some servers handle either type in either routine.
+
+** Loading Fonts [6.2.2]
++ =XListFonts()= and =XListFontsWithInfo()= to see available fonts.
++ =XLoadFont()= to load font.
++ =XQueryFont()= fills the =XFontStruct=.
+
+#+name: Example 6-3. the load_font routine
+#+begin_src c
+load_font(font_info)
+XFontStruct **font_info;
+{
+   char *fontname = "9x15";
+   /* Access font */
+   if ((*font_info = XLoadQueryFont(display,fontname)) == NULL)
+   {
+      (void) fprintf( stderr, "Basic: Cannot open 9x15 font\n");
+      exit( −1 );
+   }
+}
+#+end_src
+
+** Font Naming [6.2.3]
++ Your app should allow font names to be specified by the user using resources.
+  - However, we have to specify the default font.
+
+** Character Metrics [6.2.4]
+*** The =XCharStruct= Structure [6.2.4.1]
+#+begin_src c
+/* Per character font metric information */
+typedef struct {
+   short lbearing;              /* Origin to left edge of character */
+   short rbearing;              /* Origin to right edge of character */
+   short width;                 /* Advance to next char’s origin */
+   short ascent;                /* Baseline to top edge of character */
+   short descent;               /* Baseline to bottom edge of
+                                 * character */
+   unsigned short attributes;   /* Per char flags (not predefined) */
+}
+#+end_src
+
+*** The =XFontStruct= Structure [6.2.4.2]
+#+begin_src c
+typedef struct {
+   XExtData *ext_data;           /* Hook for extension to hang data */
+   Font fid;                     /* Font ID for this font */
+   unsigned direction;           /* Direction the font is painted */
+   unsigned min_char_or_byte2;   /* First character */
+   unsigned max_char_or_byte2;   /* Last character */
+   unsigned min_byte1;           /* First row that exists (for two−byte
+                                  * fonts) */
+   unsigned max_byte1;           /* Last row that exists (for two−byte
+                                  * fonts) */
+   Bool all_chars_exist;         /* Flag if all characters have nonzero
+                                  * size */
+   unsigned default_char;        /* Char to print for undefined character */
+   int n_properties;             /* How many properties there are */
+   XFontProp *properties;        /* Pointer to array of additional
+                                  * properties*/
+   XCharStruct min_bounds;       /* Minimum bounds over all existing char*/
+   XCharStruct max_bounds;       /* Maximum bounds over all existing char*/
+   XCharStruct *per_char;        /* first_char to last_char information */
+   int ascent;                   /* Max extent above baseline for spacing */
+   int descent;                  /* Max descent below baseline for spacing */
+} XFontStruct;
+#+end_src
+
+** Positioning of Text [6.2.5]
++ If you want the upper-left corner of the background rectangle to be at pixel coordinate (x, y), then pass (x, y+ascent) as the baseline origin coordinates to the text drawing routines.
++ If you want the lower-left corner of the background rectangle to be at pixel coordinate (x, y), then pass (x, y-descent+1) as the baseline origin coordinates to the text drawing routines.
++ See the book for useful routines.
+
+** Text-drawing Routines [6.2.6]
++ See the book.
+
+* Regions [6.3]
++ Either a rectangular area, several overlapping or adjacent rectangles, or a general polygon.
++ Chiefly used to set the =clip_mask= member of the GC.
++ =XSetRegion()= sets the =clip_mask= to a reagion so that output will occur only within with region.
+
++ The most common use of setting the =clip_mask= to a region is to combine the rectangle from each of multiple contiguous =Expose= events on a single window into a single region and clip the redrawing to that region.
+
+* Images [6.4]
++ Image structure is capable of storing all the data corresponding to a screen are or pixmap.
+  - Stored on the client side, so it doesn't have to be manipulated through X protocol requests like pixmaps.
+
+* Cursors [6.5]
++ See book.

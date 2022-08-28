@@ -15,3 +15,201 @@
   2. The 2nd stage applies on or two colors or a pattern to the results of the 1st stage, resulting in a pixmap which has the same depth (number of bits per pixel) as the drawable. The output of the 2nd stage is referred to later in this chap as the _source_.
   3. In the 3rd stage, a plane mask may be applied to select which planes of the drawable can be affected by the graphics request. This is done to play tricks with color, such as to draw temporary graphics that can be erased without erasing other things already drawin in a window, as demonstrated in Chap. 7 "Color". By default, the plane mask is all ones and therefore has no effect on what is drawn.
   4. In the 4th stage, the pixel values resulting from stage 3 can be combined with what is already oon the screen using so-called _logical functions_. Most graphics are drawn by simply overwriting the existing graphics using a logical funcion of =GXcopy=, but there are useful tricks that can be played by using certain other logical functions.
+[[./imgs/fig5_1.png]]
+
++ The GC also has the following 2 features:
+  - =graphics_exposures= member lets you selec =GraphicsExpose= and =NoExpose= events, to indicate whether areas being copied using =XCopyArea()= and =XCopyPlane()= requests are visible or invisible.
+  - =subwindow_mode= member lets you specify whether subwindows obscure graphics drawn on tha parent. Default is =True=.
+
+* Creating and Setting a Graphics Context [5.1]
++ Create using =XCreateGC()=, requiring 4 args:
+  - =display= specifies the connection to the X server;
+  - =drawable= is a window or pixmap ID. Indicates which screen the GC resource is associated with and the depth of windows it can be used with;
+  - =values= is an =XGCValues= structure with desired settings for the GC;
+  - =valuemask= specifies which members of the =XGCValues= struct are actually read.
+
+#+name: Example 5-1. The GCValues structure
+#+begin_src c
+/* Data structure for setting graphics context  */
+typedef struct {
+    int function;               /* Logical function */
+    unsigned long plane_mask;   /* Plane mask */
+    unsigned long foreground;   /* Foreground pixel */
+    unsigned long background;   /* Background pixel */
+    int line_width;             /* Line width */
+    int line_style;             /* LineSolid, LineOnOffDash,
+                                ,* LineDoubleDash */
+    int cap_style;              /* CapNotLast, CapButt, CapRound,
+                                ,* CapProjecting */
+    int join_style;             /* JoinMiter, JoinRound, JoinBevel */
+    int fill_style;             /* FillSolid, FillTiled, FillStippled,
+                                ,* FillOpaqueStippled */
+    int fill_rule;              /* EvenOddRule, WindingRule */
+    int arc_mode;               /* ArcChord, ArcPieSlice */
+    Pixmap tile;                /* Tile pixmap for tiling operations */
+    Pixmap stipple;             /* Pixmap of depth 1 */
+    int ts_x_origin;            /* Offset for tile or stipple operations */
+    int ts_y_origin;
+    Font font;                  /* Font for text operations (except
+                                ,* XDrawText) */
+    int subwindow_mode;         /* ClipByChildren, IncludeInferiors */
+    Bool graphics_exposures;    /* Should events be generated on
+                                ,* XCopyArea, XCopyPlane  */
+   int clip_x_origin;           /* Origin for clipping */
+   int clip_y_origin;
+   Pixmap clip_mask;            /* Bitmap for clipping */
+   int dash_offset;             /* Patterned/dashed line information */
+} XGCValues;
+#+end_src
+
++ See Table 5-1 for symbols ued to specify which members of the XGCValues actually contain meaningful values, and default values.
+
+#+name: Example 5-2. Setting a GC while creating it
+#+begin_src c
+GC gc;
+XGCValues values;
+unsigned long valuemask;
+   .
+   .
+/* Open display, create window, etc. */
+   .
+   .
+values.foreground = BlackPixel(display,screen_num);
+values.background = WhitePixel(display,screen_num);
+gc = XCreateGC(display, RootWindow(display, screen_num),
+      (GCForeground | GCBackground), &values);
+#+end_src
+
+#+name: Example 5-3. Setting a GC and change it
+#+begin_src c
+GC gc;
+   .
+   .
+   .
+/* Open display, create window, etc. */
+   .
+   .
+   .
+gc = XCreateGC(display, RootWindow(display, screen_num), 0, NULL);
+XSetForeground(display, gc, BlackPixel(display,screen_num));
+XSetBackground(display, gc, WhitePixel(display,screen_num));
+/* Now you can use gc in drawing routines */
+#+end_src
+
++ There is not much difference in both cases
++ =XFlushGC()= makes the changes go to the server immediately
+
+* Switching Between Graphics Contexts [5.2]
+#+name: Example 5-4. Switching GCs
+#+begin_src c
+GC gc1, gc2;
+XGCValues values;
+unsigned long valuemask;
+   .
+   .
+   .
+/* Open display, create window, etc. */
+values.foreground = BlackPixel(display,screen_num);
+values.background = WhitePixel(display,screen_num);
+gc1 = XCreateGC(display, RootWindow(display, screen_num),
+   (GCForeground | GCBackground), &values);
+values.foreground = WhitePixel(display,screen_num);
+values.background = BlackPixel(display,screen_num);
+gc2 = XCreateGC(display, RootWindow(display, screen_num),
+   (GCForeground | GCBackground), &values);
+/* Now you can use either gc in drawing routines, thereby
+ * quickly swapping the foreground and background colors */
+#+end_src
+
++ There is no way for the client to know if switching GCs and modifying values in one GC is fastest.
+  - Accepted practice is to compromise by creating a small number of GCs.
+
+* Controlling Pixel Selection [5.3]
++ Can be thought as the frist stage in the drawing process.
+
+** Line Characteristics [5.3.1]
++ =line_width= is the width in pixels.
++ =line_style= is whether the line is slid in foreground, dashed in foreground, or alternating foreground and background.
++ =cap_style= controls the appearance of the ends of a line and in some cases the ends of dashed in a line.
++ =join_style= controls the appearance of joints between consecutive lines.
++ =dashes= specifies a pattern of dash lengths for custom-designed dashed lines.
++ =dash_offset= specifies the starting point of dashes for custom-designed dashed lines.
+
+#+name: Example of Setting line Characteristics
+#+begin_src c
+set_line_attributes(gc)
+GC gc;
+{
+   unsigned int line_width = 3;    /* 0 would be fast line of width 1 */
+   int line_style = LineSolid;     /* If LineOnOffDash or LineDoubleDash,
+                                    ,* must set dashes */
+   int cap_style = CapRound;       /* else CapNotLast, CapButt, or
+                                    ,* CapProjecting */
+   int join_style = JoinRound;     /* else JoinMiter or JoinBevel */
+   XSetLineAttributes(display, gc, line_width, line_style,
+           cap_style, join_style);
+}
+#+end_src
+
+** The Font [5.3.2]
++ Specifies which font will be used in text-drawing graphics primitives.
+
+** Fill Rule [5.3.3]
++ Defines which pixels are drawn for paths given in =XFillPolygon()= requests.
+
+** Arc Mode [5.3.4]
++ Controls filling of arcs drawn with =XFillArc= and =XFillArcs()=.
+
+** Clip Mask [5.3.5]
++ Is a bitmap that indicates which pixels of the destination drawable are to be affected by graphic requests.
+
+* Controlling Coloring and Patterning [5.4]
++ 1st stage results in a bitmap with bits set to one indicating the pixels to be drawn. 2nd stage colors the pixels.
+
+** Drawing in Foreground Only [5.4.1]
++ Basic drawing.
++ Draws with foreground only.
++ Foreground is set with =XSetForeground()=.
+
+** Tiles [5.4.2]
++ A tile is a pixmap used to pattern the pixels selected by the first tstage of the drawing process.
++ The =tile= member of the CG can be set with =XSetTile()=.
+
+** Stipples [5.4.3]
++ Simples pixmap of depth 1.
+
+** Fill Style [5.4.4]
++ The =fill_style= of =XGCValues= controls whether the source graphics are drawn with a solid color, a tile, or one of 2 techniques using a stipple.
+
+** Drawing in Foreground and Background [5.4.5]
++ Draws with both =foreground= and =background=
+
+* Controlling Graphics Tricks [5.5]
++ The GC provides a flexible way to control exactly which planes are affected by graphics requests and how the source and old destination pixel values are used to compute the new destination pixel values.
+  - These features are needed only for playing certain tricks like rubber-banding, and nondestructively overlaying graphics.
+
++ The source (result of stage 2) and destination pixels are combined by performing a logical function (=function=) on the corresponding bits for each pixel.
++ The =plane_mask= (member of =XGCValues=) restrics the operation to a subset of planes.
+
+* Graphics Exposure [5.6]
++ =graphics_exposures= flag in the GC specifies whether events should be generated in the case that =XCopyArea()= or =XCopyPlane()= copies data from one drawable to another when some of the source region is obscured, unmapped, or otherwise unavailable.
+  - In this case, it may be desirable to generate events to signal the client that one or more areas in the destination window should be redrawn some other way.
+
+* Subwindow Mode [5.7]
++ The =subwindow_mode= member of =XGCValues= controls whether subwindows obscure their parent for purposes of drawing on the parent.
+
+* Sharing GCs Between Clients [5.8]
++ Not recommended.
+
+* GCs and Server Efficiency [5.9]
++ An app should create as few GCs as possible.
++ There are also performance costs when GCs are changed too often.
+
+* Querying the GC [5.10]
++ Xlib saves up changes in an internal structure and makes a single request to the server just before the GC is actually used by a drawing request.
++ =XGetGCValues()= is not a round-trip query to the server.
+  - The =tile=, =stiple=, and =font= fields contain invalid IDs when this routine is called for the first time.
+
+* The Default GC vs Default Values of a GC [5.11]
++ The default GC is created when the server starts up.
++ When you create a GC on your own, its default values are not the same as the default GC.
